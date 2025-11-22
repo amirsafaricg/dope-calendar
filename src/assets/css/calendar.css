@@ -1,0 +1,39 @@
+.dope-calendar-grid {
+  /* Main Colors */
+  --dc-bg: #ffffff;
+  --dc-text-color: #111827;
+  --dc-border-color: #e5e7eb;
+
+  /* Header (Month/Year) */
+  --dc-header-text-color: #111827;
+  --dc-header-arrow-color: #9ca3af;
+
+  /* Weekday Names */
+  --dc-weekday-text-color: #6b7280;
+
+  /* Day Numbers */
+  --dc-day-text-color: #374151;
+  --dc-day-hover-bg: #f3f4f6;
+  --dc-day-today-bg: #fecaca;
+  --dc-day-today-text-color: #b91c1c;
+  --dc-day-selected-bg: #ef4444;
+  --dc-day-selected-text-color: #ffffff;
+  --dc-day-out-of-month-text-color: #9ca3af;
+}
+
+/* Example of how a user could create a dark theme */
+[data-theme='dark'] .dope-calendar-grid {
+  --dc-bg: #1f2937;
+  --dc-text-color: #f9fafb;
+  --dc-border-color: #4b5563;
+  --dc-header-text-color: #f9fafb;
+  --dc-header-arrow-color: #9ca3af;
+  --dc-weekday-text-color: #d1d5db;
+  --dc-day-text-color: #d1d5db;
+  --dc-day-hover-bg: #374151;
+  --dc-day-today-bg: #991b1b;
+  --dc-day-today-text-color: #fecaca;
+  --dc-day-selected-bg: #b91c1c;
+  --dc-day-selected-text-color: #ffffff;
+  --dc-day-out-of-month-text-color: #6b7280;
+}
