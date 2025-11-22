@@ -34,7 +34,7 @@ export default defineComponent({
     },
     lang: {
       type: String as PropType<'en' | 'fa'>,
-      default: 'en',
+      default: 'fa',
       validator: (value: string) => {
         return ['en', 'fa'].includes(value)
       },
@@ -55,6 +55,9 @@ export default defineComponent({
 
     const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
 
+    const toPersianNum = (n: number | string) =>
+      String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[parseInt(d)])
+
     const monthDays = computed(() => {
       const days = []
       if (props.georgian) {
@@ -65,7 +68,7 @@ export default defineComponent({
         for (let day = 1; day <= daysInMonth; day++) {
           const date = new Date(year, month, day)
           days.push({
-            day: day,
+            day: props.lang === 'fa' ? toPersianNum(day) : day,
             weekDay: weekdays[date.getDay()],
           })
         }
@@ -78,7 +81,7 @@ export default defineComponent({
           const gregorianDate = jalaali.toGregorian(year, month, day)
           const date = new Date(gregorianDate.gy, gregorianDate.gm - 1, gregorianDate.gd)
           days.push({
-            day: day,
+            day: props.lang === 'fa' ? toPersianNum(day) : day,
             weekDay: weekdays[date.getDay()],
           })
         }
