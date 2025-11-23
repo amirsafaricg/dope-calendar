@@ -1,39 +1,40 @@
 <template>
-  <div :dir="direction" ref="calendar" class="calendar-wrapper dope-calendar-grid">
-   <div class="header-container">
-    <div class="header-padding"></div>
-     <div class="calendar-header">
-      <div v-for="(day, index) in monthDays" :key="index" class="day-cell" :style="{
-        width: 'var(--dc-day-container-width)',
-      }">
-        <div class="day-number" :style="{
-          color: isWeekend(day.weekDay)
-            ? 'var(--dc-weekend-day-color)'
-            : 'var(--dc-day-number-color)',
-          fontSize: 'var(--dc-day-number-font-size)',
-          fontWeight: 'var(--dc-day-number-font-weight)'
+  <div :dir="direction" ref="calendar" class="calendar-wrapper  dope-calendar-grid">
+    <div class="header-container">
+      <div class="header-padding"></div>
+      <div ref="calendarHeader" class="calendar-header hide-scrollbar">
+        <div v-for="(day, index) in monthDays" :key="index" class="day-cell" :style="{
+          width: 'var(--dc-day-container-width)',
         }">
-          {{ day.day }}
-        </div>
-        <div class="day-name" :style="{
-          color: isWeekend(day.weekDay)
-            ? 'var(--dc-weekend-day-color)'
-            : 'var(--dc-day-name-color)',
-          fontSize: 'var(--dc-day-name-font-size)',
-          fontWeight: 'var(--dc-day-name-font-weight)'
-        }">
-          {{ getDayTitle(day.weekDay) }}
+          <div class="day-number" :style="{
+            color: isWeekend(day.weekDay)
+              ? 'var(--dc-weekend-day-color)'
+              : 'var(--dc-day-number-color)',
+            fontSize: 'var(--dc-day-number-font-size)',
+            fontWeight: 'var(--dc-day-number-font-weight)'
+          }">
+            {{ day.day }}
+          </div>
+          <div class="day-name" :style="{
+            color: isWeekend(day.weekDay)
+              ? 'var(--dc-weekend-day-color)'
+              : 'var(--dc-day-name-color)',
+            fontSize: 'var(--dc-day-name-font-size)',
+            fontWeight: 'var(--dc-day-name-font-weight)'
+          }">
+            {{ getDayTitle(day.weekDay) }}
+          </div>
         </div>
       </div>
     </div>
-   </div>
-    <div class="content-container">
-      <div class="hours-column">
+    <div class="content-container hide-scrollbar">
+      <div class="hours-column" :style="{ height: calendarBodyHeight }">
         <div v-for="(hour, index) in dayHoursList" :key="index" class="hour-label">
           {{ hour }}
         </div>
       </div>
-      <div class="calendar-body" :style="{ height: calendarBodyHeight }">
+      <div class="calendar-body hide-scrollbar" @scroll="handleContentScroll" ref="calendarContent"
+        :style="{ height: calendarBodyHeight }">
         <div class="grid-content" :style="{ minWidth: calendarBodyWidth }">
           <div class="horizontal-grid">
             <div v-for="(hour, index) in dayHoursList" :key="index">
@@ -41,8 +42,8 @@
             </div>
           </div>
           <div class="vertical-grid">
-            <div v-for="day in monthDays.length+1" :key="day">
-              <div class="grid-line-v"></div>
+            <div v-for="day in monthDays.length + 1" :key="day">
+              <div :class="{ 'grid-line-v': day !== 1 }"></div>
             </div>
           </div>
         </div>
@@ -102,6 +103,15 @@ export default defineComponent({
     const calendar = ref<HTMLElement | null>(null)
     if (props.georgian === props.jalaali) {
       throw new Error('Exactly one of "georgian" or "jalaali" props must be true.')
+    }
+
+    const calendarContent = ref<HTMLElement | null>(null)
+    const calendarHeader = ref<HTMLElement | null>(null)
+
+    const handleContentScroll = () => {
+      if (calendarHeader.value && calendarContent.value) {
+        calendarHeader.value.scrollLeft = calendarContent.value.scrollLeft
+      }
     }
 
     const weekdays = [
@@ -330,8 +340,11 @@ export default defineComponent({
       calendarBodyWidth,
       weekendDay,
       direction,
+      calendarContent,
+      calendarHeader,
       monthDays,
       getDayTitle,
+      handleContentScroll,
       calendar,
       isWeekend,
       dayHoursList,
@@ -361,6 +374,7 @@ export default defineComponent({
   flex: 1;
   /* padding-left: var(--dc-day-container-width); */
 }
+
 /* [dir='rtl']{
   padding-right: var(--dc-day-container-width);
 } */
@@ -460,22 +474,25 @@ export default defineComponent({
   inset: 0;
   gap: ();
 }
-.content-container{
+
+.content-container {
   display: flex;
   flex: 1;
   position: relative;
   width: 100%;
   overflow-y: auto;
 }
+
 .grid-line-h {
   width: 100%;
   border: var(--dc-border-width) solid var(--dc-border-color)
 }
 
-.header-container{
+.header-container {
   display: flex;
 }
-.header-padding{
+
+.header-padding {
   width: var(--dc-day-container-width);
   flex-shrink: 0;
   height: 100%;
@@ -484,5 +501,17 @@ export default defineComponent({
 .grid-line-v {
   height: 100%;
   border: var(--dc-border-width) solid var(--dc-border-color)
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+  /* Chrome, Safari and Opera */
 }
 </style>
