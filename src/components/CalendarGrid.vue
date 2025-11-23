@@ -26,10 +26,10 @@
         </div>
       </div>
     </div>
-    <div class="calendar-body">
-      <div class="grid-content" :style="{ backgroundColor: 'var(--dc-bg)' }"></div>
+    <div class="calendar-body" :style="{ width: calendarBodyWidth }">
+      <div class="grid-content"></div>
     </div>
-    <div class="hours-column" :style="{ width: 'var(--dc-day-container-width)' }">
+    <div class="hours-column" >
       <div v-for="(hour, index) in dayHoursList" :key="index" class="hour-label" :style="{
         color: 'var(--dc-day-number-color)',
         fontSize: 'var(--dc-day-number-font-size)',
@@ -286,7 +286,14 @@ export default defineComponent({
       return [] // Default empty array
     })
 
+    const dayCellWidth = 40 // in pixels, matching --dc-day-cell-width
+
+    const calendarBodyWidth = computed(() => {
+      return `${monthDays.value.length * dayCellWidth}px`
+    })
+
     return {
+      calendarBodyWidth,
       weekendDay,
       direction,
       monthDays,
@@ -323,7 +330,7 @@ export default defineComponent({
   align-items: center;
   justify-content: center;
   padding: 0.5rem;
-  min-width: 40px;
+  min-width: var(--dc-day-cell-width);
   flex-shrink: 0;
   /* p-2 */
 }
@@ -337,22 +344,24 @@ export default defineComponent({
 }
 
 .calendar-body {
-  width: 100%;
-  max-width: 100dvw;
   flex: 1;
   white-space: nowrap;
   display: flex;
+  background-color: var(--dc-bg);
 }
 
 .hours-column {
   flex-shrink: 0;
   height: calc(100% - 50px);
   min-width: 3.5rem;
-  position:  absolute;
+  position: fixed;
   bottom: 0px;
-  padding-top: 50px;
   background-color: var(--dc-bg);
-  /* min-w-14 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-around;
+  width:var(--dc-day-container-width);
 }
 
 .hour-label {
@@ -362,7 +371,7 @@ export default defineComponent({
 .grid-content {
   flex: 1;
   height: 100%;
-  background-color: rgb(248 113 113);
+  background-color: var(--dc-bg);
   /* bg-red-400 */
 }
 </style>
