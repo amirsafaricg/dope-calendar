@@ -28,24 +28,20 @@
     <div class="calendar-body">
       <div class="grid-padding"></div>
       <div class="grid-content" :style="{ minWidth: calendarBodyWidth }">
-         <div class="horizontal-grid">
+        <div class="horizontal-grid">
           <div v-for="(hour, index) in dayHoursList" :key="index">
-            <div  class="grid-line-h"></div>
+            <div class="grid-line-h"></div>
           </div>
         </div>
         <div class="vertical-grid">
           <div v-for="(day, index) in monthDays" :key="index">
-            <div v-if="index!==0 && index!== monthDays.length-1" class="grid-line-v"></div>
+            <div v-if="index !== 0 && index !== monthDays.length - 1" class="grid-line-v"></div>
           </div>
-        </div> 
+        </div>
       </div>
     </div>
     <div class="hours-column">
-      <div v-for="(hour, index) in dayHoursList" :key="index" class="hour-label" :style="{
-        color: 'var(--dc-day-number-color)',
-        fontSize: 'var(--dc-day-number-font-size)',
-        fontWeight: 'var(--dc-day-number-font-weight)'
-      }">
+      <div v-for="(hour, index) in dayHoursList" :key="index" class="hour-label">
         {{ hour }}
       </div>
     </div>
@@ -395,7 +391,10 @@ export default defineComponent({
 }
 
 .hour-label {
-  /* Placeholder for hour label styling */
+  color: var(--dc-day-number-color);
+  font-size : var(--dc-day-number-font-size);
+  min-height: var(--dc-day-cell-height);
+  font-weight: var(--dc-day-number-font-weight);
 }
 
 .grid-padding {
@@ -431,7 +430,7 @@ export default defineComponent({
   display: flex;
   position: absolute;
   z-index: 0;
-  align-items:stretch;
+  align-items: stretch;
   justify-content: space-between;
   top: 0;
   left: 0;
@@ -444,9 +443,9 @@ export default defineComponent({
   width: 100%;
   border: var(--dc-border-width) solid var(--dc-border-color)
 }
-.grid-line-v{
+
+.grid-line-v {
   height: 100%;
   border: var(--dc-border-width) solid var(--dc-border-color)
 }
-
 </style>

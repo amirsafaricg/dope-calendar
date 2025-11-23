@@ -8,6 +8,7 @@
   --dc-border-width: 0.5px;
   --dc-day-container-width: 56px;
   --dc-day-cell-width: 40px;
+  --dc-day-cell-height: 36px;
 
   /* Day Number */
   --dc-day-number-color: black;
