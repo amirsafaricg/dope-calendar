@@ -47,6 +47,7 @@
               <div :class="{ 'grid-line-v': day !== 1 }"></div>
             </div>
           </div>
+          <div class="content"></div>
         </div>
       </div>
     </div>
@@ -413,7 +414,12 @@ export default defineComponent({
 </script>
 <style scoped>
 @import '@/assets/css/calendar.css';
-
+.content{
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  z-index: 10;
+}
 .calendar-wrapper {
   width: 100%;
   height: 100%;
