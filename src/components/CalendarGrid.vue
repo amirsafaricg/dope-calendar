@@ -4,7 +4,6 @@
       <div :style="{ width: 'var(--dc-day-container-width)', flexShrink: 0 }"></div>
       <div v-for="(day, index) in monthDays" :key="index" class="day-cell" :style="{
         width: 'var(--dc-day-container-width)',
-        borderLeft: 'var(--dc-border-width) solid var(--dc-border-color)'
       }">
         <div class="day-number" :style="{
           color: isWeekend(day.weekDay)
@@ -26,10 +25,22 @@
         </div>
       </div>
     </div>
-    <div class="calendar-body" :style="{ width: calendarBodyWidth }">
-      <div class="grid-content"></div>
+    <div class="calendar-body">
+      <div class="grid-padding"></div>
+      <div class="grid-content" :style="{ minWidth: calendarBodyWidth }">
+         <div class="horizontal-grid">
+          <div v-for="(hour, index) in dayHoursList" :key="index">
+            <div  class="grid-line-h"></div>
+          </div>
+        </div>
+        <div class="vertical-grid">
+          <div v-for="(day, index) in monthDays" :key="index">
+            <div v-if="index!==0 && index!== monthDays.length-1" class="grid-line-v"></div>
+          </div>
+        </div> 
+      </div>
     </div>
-    <div class="hours-column" >
+    <div class="hours-column">
       <div v-for="(hour, index) in dayHoursList" :key="index" class="hour-label" :style="{
         color: 'var(--dc-day-number-color)',
         fontSize: 'var(--dc-day-number-font-size)',
@@ -286,11 +297,24 @@ export default defineComponent({
       return [] // Default empty array
     })
 
-    const dayCellWidth = 40 // in pixels, matching --dc-day-cell-width
+    const dayCellWidth = ref(0) // in pixels, matching --dc-day-cell-width
 
     const calendarBodyWidth = computed(() => {
-      return `${monthDays.value.length * dayCellWidth}px`
+      return `${monthDays.value.length * dayCellWidth.value}px`
     })
+    onMounted(() => {
+      console.log(monthDays.value)
+      if (calendar.value) {
+        const style = getComputedStyle(calendar.value)
+        const widthStr = style.getPropertyValue('--dc-day-container-width').trim()
+        console.log(widthStr)
+        if (widthStr) {
+          dayCellWidth.value = parseInt(widthStr, 10)
+        }
+        console.log(calendarBodyWidth.value)
+      }
+    })
+
 
     return {
       calendarBodyWidth,
@@ -330,9 +354,8 @@ export default defineComponent({
   align-items: center;
   justify-content: center;
   padding: 0.5rem;
-  min-width: var(--dc-day-cell-width);
+  width: var(--dc-day-cell-width);
   flex-shrink: 0;
-  /* p-2 */
 }
 
 .day-number {
@@ -350,28 +373,80 @@ export default defineComponent({
   background-color: var(--dc-bg);
 }
 
+
 .hours-column {
   flex-shrink: 0;
   height: calc(100% - 50px);
-  min-width: 3.5rem;
+  min-width: var(--dc-day-container-width);
   position: fixed;
+  z-index: 10;
   bottom: 0px;
   background-color: var(--dc-bg);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: space-around;
-  width:var(--dc-day-container-width);
+  width: var(--dc-day-container-width);
+  border-left: var(--dc-border-width) solid var(--dc-border-color);
+}
+
+[dir='rtl'] .hours-column {
+  border-right: var(--dc-border-width) solid var(--dc-border-color);
 }
 
 .hour-label {
   /* Placeholder for hour label styling */
 }
 
+.grid-padding {
+  flex-shrink: 0;
+  height: 100%;
+  min-width: var(--dc-day-container-width);
+  width: var(--dc-day-container-width);
+}
+
 .grid-content {
   flex: 1;
   height: 100%;
   background-color: var(--dc-bg);
+  position: relative;
   /* bg-red-400 */
 }
+
+.horizontal-grid {
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  z-index: 0;
+  align-items: items-stretch;
+  justify-content: space-around;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  inset: 0;
+}
+
+.vertical-grid {
+  display: flex;
+  position: absolute;
+  z-index: 0;
+  align-items:stretch;
+  justify-content: space-between;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  inset: 0;
+}
+
+.grid-line-h {
+  width: 100%;
+  border: var(--dc-border-width) solid var(--dc-border-color)
+}
+.grid-line-v{
+  height: 100%;
+  border: var(--dc-border-width) solid var(--dc-border-color)
+}
+
 </style>
