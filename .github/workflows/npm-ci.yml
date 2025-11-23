@@ -1,0 +1,36 @@
+name: Build, Test, and Publish
+
+on:
+  push:
+    tags:
+      - "^[0-9]+.[0-9]+.[0-9]+([-](alpha|beta|rc))?(.[0-9]+)?$"
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.5.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests and build project
+        run: npm test && npm run build
+
+      - name: Publish to npm registry
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
