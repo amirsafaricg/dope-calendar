@@ -1,7 +1,8 @@
 <template>
   <div :dir="direction" ref="calendar" class="calendar-wrapper dope-calendar-grid">
-    <div class="calendar-header">
-      <div :style="{ width: 'var(--dc-day-container-width)', flexShrink: 0 }"></div>
+   <div class="header-container">
+    <div class="header-padding"></div>
+     <div class="calendar-header">
       <div v-for="(day, index) in monthDays" :key="index" class="day-cell" :style="{
         width: 'var(--dc-day-container-width)',
       }">
@@ -25,24 +26,26 @@
         </div>
       </div>
     </div>
-    <div class="calendar-body">
-      <div class="grid-padding"></div>
-      <div class="grid-content" :style="{ minWidth: calendarBodyWidth }">
-        <div class="horizontal-grid">
-          <div v-for="(hour, index) in dayHoursList" :key="index">
-            <div class="grid-line-h"></div>
-          </div>
-        </div>
-        <div class="vertical-grid">
-          <div v-for="(day, index) in monthDays" :key="index">
-            <div v-if="index !== 0 && index !== monthDays.length - 1" class="grid-line-v"></div>
-          </div>
+   </div>
+    <div class="content-container">
+      <div class="hours-column">
+        <div v-for="(hour, index) in dayHoursList" :key="index" class="hour-label">
+          {{ hour }}
         </div>
       </div>
-    </div>
-    <div class="hours-column">
-      <div v-for="(hour, index) in dayHoursList" :key="index" class="hour-label">
-        {{ hour }}
+      <div class="calendar-body" :style="{ height: calendarBodyHeight }">
+        <div class="grid-content" :style="{ minWidth: calendarBodyWidth }">
+          <div class="horizontal-grid">
+            <div v-for="(hour, index) in dayHoursList" :key="index">
+              <div class="grid-line-h"></div>
+            </div>
+          </div>
+          <div class="vertical-grid">
+            <div v-for="day in monthDays.length+1" :key="day">
+              <div class="grid-line-v"></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -294,18 +297,29 @@ export default defineComponent({
     })
 
     const dayCellWidth = ref(0) // in pixels, matching --dc-day-cell-width
+    const dayCellHeight = ref(0) // in pixels, matching --dc-day-cell-height
 
     const calendarBodyWidth = computed(() => {
       return `${monthDays.value.length * dayCellWidth.value}px`
     })
+
+    const calendarBodyHeight = computed(() => {
+      return `${dayHoursList.value.length * dayCellHeight.value}px`
+    })
+
+
     onMounted(() => {
       console.log(monthDays.value)
       if (calendar.value) {
         const style = getComputedStyle(calendar.value)
         const widthStr = style.getPropertyValue('--dc-day-container-width').trim()
+        const heightStr = style.getPropertyValue('--dc-day-cell-height').trim()
         console.log(widthStr)
         if (widthStr) {
           dayCellWidth.value = parseInt(widthStr, 10)
+        }
+        if (heightStr) {
+          dayCellHeight.value = parseInt(heightStr, 10)
         }
         console.log(calendarBodyWidth.value)
       }
@@ -321,6 +335,7 @@ export default defineComponent({
       calendar,
       isWeekend,
       dayHoursList,
+      calendarBodyHeight,
     }
   },
 })
@@ -342,7 +357,13 @@ export default defineComponent({
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  overflow-x: auto;
+  flex: 1;
+  /* padding-left: var(--dc-day-container-width); */
 }
+/* [dir='rtl']{
+  padding-right: var(--dc-day-container-width);
+} */
 
 .day-cell {
   display: flex;
@@ -366,6 +387,7 @@ export default defineComponent({
   flex: 1;
   white-space: nowrap;
   display: flex;
+  overflow-y: auto;
   background-color: var(--dc-bg);
 }
 
@@ -374,7 +396,6 @@ export default defineComponent({
   flex-shrink: 0;
   height: calc(100% - 50px);
   min-width: var(--dc-day-container-width);
-  position: fixed;
   z-index: 10;
   bottom: 0px;
   background-color: var(--dc-bg);
@@ -392,17 +413,17 @@ export default defineComponent({
 
 .hour-label {
   color: var(--dc-day-number-color);
-  font-size : var(--dc-day-number-font-size);
+  font-size: var(--dc-day-number-font-size);
   min-height: var(--dc-day-cell-height);
   font-weight: var(--dc-day-number-font-weight);
 }
 
-.grid-padding {
+/* .grid-padding {
   flex-shrink: 0;
   height: 100%;
   min-width: var(--dc-day-container-width);
   width: var(--dc-day-container-width);
-}
+} */
 
 .grid-content {
   flex: 1;
@@ -437,11 +458,27 @@ export default defineComponent({
   width: 100%;
   height: 100%;
   inset: 0;
+  gap: ();
 }
-
+.content-container{
+  display: flex;
+  flex: 1;
+  position: relative;
+  width: 100%;
+  overflow-y: auto;
+}
 .grid-line-h {
   width: 100%;
   border: var(--dc-border-width) solid var(--dc-border-color)
+}
+
+.header-container{
+  display: flex;
+}
+.header-padding{
+  width: var(--dc-day-container-width);
+  flex-shrink: 0;
+  height: 100%;
 }
 
 .grid-line-v {
