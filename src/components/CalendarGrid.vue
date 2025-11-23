@@ -1,9 +1,41 @@
 <template>
-  <div :dir="direction" ref="calendar" class="w-full overflow-auto dope-calendar-grid h-full">
-    <div class="w-full flex items-center">
-      <div v-for="(day, index) in monthDays" :key="index">
-        <div>{{ day.day }}</div>
-        <div>{{ getDayTitle(day.weekDay) }}</div>
+  <div :dir="direction" ref="calendar" class="calendar-wrapper dope-calendar-grid">
+    <div class="calendar-header">
+      <div :style="{ width: 'var(--dc-day-container-width)', flexShrink: 0 }"></div>
+      <div v-for="(day, index) in monthDays" :key="index" class="day-cell" :style="{
+        width: 'var(--dc-day-container-width)',
+        borderLeft: 'var(--dc-border-width) solid var(--dc-border-color)'
+      }">
+        <div class="day-number" :style="{
+          color: isWeekend(day.weekDay)
+            ? 'var(--dc-weekend-day-color)'
+            : 'var(--dc-day-number-color)',
+          fontSize: 'var(--dc-day-number-font-size)',
+          fontWeight: 'var(--dc-day-number-font-weight)'
+        }">
+          {{ day.day }}
+        </div>
+        <div class="day-name" :style="{
+          color: isWeekend(day.weekDay)
+            ? 'var(--dc-weekend-day-color)'
+            : 'var(--dc-day-name-color)',
+          fontSize: 'var(--dc-day-name-font-size)',
+          fontWeight: 'var(--dc-day-name-font-weight)'
+        }">
+          {{ getDayTitle(day.weekDay) }}
+        </div>
+      </div>
+    </div>
+    <div class="calendar-body">
+      <div class="grid-content" :style="{ backgroundColor: 'var(--dc-bg)' }"></div>
+    </div>
+    <div class="hours-column" :style="{ width: 'var(--dc-day-container-width)' }">
+      <div v-for="(hour, index) in dayHoursList" :key="index" class="hour-label" :style="{
+        color: 'var(--dc-day-number-color)',
+        fontSize: 'var(--dc-day-number-font-size)',
+        fontWeight: 'var(--dc-day-number-font-weight)'
+      }">
+        {{ hour }}
       </div>
     </div>
   </div>
@@ -29,8 +61,17 @@ export default defineComponent({
       default: () => new Date(),
     },
     days: {
-      type: Number,
+      type: [Number, String] as PropType<number | 'auto'>,
       default: 'auto',
+      validator: (value: unknown) => {
+        if (typeof value === 'string') {
+          return value === 'auto'
+        }
+        if (typeof value === 'number') {
+          return Number.isInteger(value)
+        }
+        return false
+      },
     },
     lang: {
       type: String as PropType<'en' | 'fa'>,
@@ -53,13 +94,26 @@ export default defineComponent({
       throw new Error('Exactly one of "georgian" or "jalaali" props must be true.')
     }
 
-    const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+    const weekdays = [
+      'sunday',
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+    ] as const
+
 
     const toPersianNum = (n: number | string) =>
-      String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[parseInt(d)])
+      String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[parseInt(d)]!)
 
     const monthDays = computed(() => {
-      const days = []
+      type DayObject = {
+        day: number | string
+        weekDay: string
+      }
+      const days: DayObject[] = []
       if (props.georgian) {
         const year = props.date.getFullYear()
         const month = props.date.getMonth() // 0-indexed
@@ -69,7 +123,7 @@ export default defineComponent({
           const date = new Date(year, month, day)
           days.push({
             day: props.lang === 'fa' ? toPersianNum(day) : day,
-            weekDay: weekdays[date.getDay()],
+            weekDay: weekdays[date.getDay()]!,
           })
         }
       } else {
@@ -82,7 +136,7 @@ export default defineComponent({
           const date = new Date(gregorianDate.gy, gregorianDate.gm - 1, gregorianDate.gd)
           days.push({
             day: props.lang === 'fa' ? toPersianNum(day) : day,
-            weekDay: weekdays[date.getDay()],
+            weekDay: weekdays[date.getDay()]!,
           })
         }
       }
@@ -176,23 +230,29 @@ export default defineComponent({
 
     const dayHoursList = computed(() => {
       if (props.format === '24h') {
-        return Array.from({ length: 24 }, (_, i) => `${i}:00`)
+        return Array.from({ length: 24 }, (_, i) => {
+          const time = `${i}:00`
+          return props.lang === 'fa' ? toPersianNum(time) : time
+        })
       }
 
       if (props.format === 'ampm') {
         const hours = []
         for (let i = 0; i < 24; i++) {
           const hour = i % 12 === 0 ? 12 : i % 12
-          const period = i < 12 ? 'am' : 'pm'
-          hours.push(`${hour} ${period}`)
+          if (props.lang === 'fa') {
+            const period = i < 12 ? 'ق.ظ' : 'ب.ظ'
+            hours.push(`${toPersianNum(hour)} ${period}`)
+          } else {
+            const period = i < 12 ? 'am' : 'pm'
+            hours.push(`${hour} ${period}`)
+          }
         }
         return hours
       }
 
       if (props.format === 'keys') {
         if (props.lang === 'fa') {
-          const toPersianNum = (n: number) =>
-            n.toString().replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[parseInt(d)])
           const faHours = []
           for (let i = 0; i < 24; i++) {
             let period = ''
@@ -233,10 +293,76 @@ export default defineComponent({
       getDayTitle,
       calendar,
       isWeekend,
+      dayHoursList,
     }
   },
 })
 </script>
 <style scoped>
 @import '@/assets/css/calendar.css';
+
+.calendar-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  position: relative;
+}
+
+.calendar-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.day-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  min-width: 40px;
+  flex-shrink: 0;
+  /* p-2 */
+}
+
+.day-number {
+  /* Styles are applied via inline :style */
+}
+
+.day-name {
+  /* Styles are applied via inline :style */
+}
+
+.calendar-body {
+  width: 100%;
+  max-width: 100dvw;
+  flex: 1;
+  white-space: nowrap;
+  display: flex;
+}
+
+.hours-column {
+  flex-shrink: 0;
+  height: calc(100% - 50px);
+  min-width: 3.5rem;
+  position:  absolute;
+  bottom: 0px;
+  padding-top: 50px;
+  background-color: var(--dc-bg);
+  /* min-w-14 */
+}
+
+.hour-label {
+  /* Placeholder for hour label styling */
+}
+
+.grid-content {
+  flex: 1;
+  height: 100%;
+  background-color: rgb(248 113 113);
+  /* bg-red-400 */
+}
 </style>
