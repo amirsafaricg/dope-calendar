@@ -46,3 +46,19 @@ npm run build
 ```sh
 npm run lint
 ```
+
+# ❤️ Sponsors
+
+Huge thanks to our amazing sponsors! Your support helps keep this project alive and actively maintained.
+
+<div align="center">
+  <a href="https://github.com/wenex-org">
+    <img src="https://avatars.githubusercontent.com/u/124876522?s=200&v=4" width="200" alt="Wenex" style="padding: 20px; border: 1px solid #eee; border-radius: 12px; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+    <br>
+    <strong>Wenex</strong>
+  </a>
+</div>
+
+# License
+
+This project is licensed under the MIT License - SEE the [LICENSE](LICENSE) file for details
