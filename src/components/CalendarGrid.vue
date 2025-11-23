@@ -28,7 +28,8 @@
       </div>
     </div>
     <div class="content-container hide-scrollbar">
-      <div class="hours-column" :style="{ height: calendarBodyHeight }">
+      <div :class="{ 'hours-column': true, 'zoomable': zoom }" :style="{ height: calendarBodyHeight }"
+        @mousedown="handleZoomStart" @touchstart="handleZoomStart">
         <div v-for="(hour, index) in dayHoursList" :key="index" class="hour-label">
           {{ hour }}
         </div>
@@ -61,6 +62,18 @@ export default defineComponent({
     georgian: {
       type: Boolean,
       default: true,
+    },
+    zoom: {
+      type: Boolean,
+      default: true,
+    },
+    minZoom: {
+      type: Number,
+      default: 1,
+    },
+    maxZoom: {
+      type: Number,
+      default: 5,
     },
     jalaali: {
       type: Boolean,
@@ -306,16 +319,60 @@ export default defineComponent({
       return [] // Default empty array
     })
 
-    const dayCellWidth = ref(0) // in pixels, matching --dc-day-cell-width
-    const dayCellHeight = ref(0) // in pixels, matching --dc-day-cell-height
+    const dayCellWidth = ref(0)
+    const dayCellHeight = ref(0)
+    const zoomAmount = ref(1)
+    const isZooming = ref(false)
+    const startY = ref(0)
+    const initialZoom = ref(1)
 
     const calendarBodyWidth = computed(() => {
       return `${monthDays.value.length * dayCellWidth.value}px`
     })
 
     const calendarBodyHeight = computed(() => {
-      return `${dayHoursList.value.length * dayCellHeight.value}px`
+      return `${dayHoursList.value.length * zoomAmount.value * dayCellHeight.value}px`
     })
+
+    const handleZoomStart = (event: MouseEvent | TouchEvent) => {
+      if (!props.zoom) return
+      isZooming.value = true
+      startY.value = 'touches' in event ? event.touches[0]!.clientY : event.clientY
+      initialZoom.value = zoomAmount.value
+      window.addEventListener('mousemove', handleZoomMove)
+      window.addEventListener('mouseup', handleZoomEnd)
+      window.addEventListener('touchmove', handleZoomMove)
+      window.addEventListener('touchend', handleZoomEnd)
+      document.body.style.cursor = 'ns-resize'
+      document.body.style.userSelect = 'none'
+    }
+
+    const handleZoomMove = (event: MouseEvent | TouchEvent) => {
+      if (!isZooming.value) return
+
+      requestAnimationFrame(() => {
+        const currentY = 'touches' in event ? event.touches[0]!.clientY : event.clientY
+        const deltaY = startY.value - currentY // Inverted for natural feel (drag up = zoom in)
+        const zoomSensitivity = 200 // Adjust this value to control zoom speed
+        const newZoom = initialZoom.value + deltaY / zoomSensitivity
+
+        // Clamp the zoom level between min and max
+        zoomAmount.value = Math.max(props.minZoom, Math.min(props.maxZoom, newZoom))
+      })
+    }
+
+    const handleZoomEnd = () => {
+      if (!isZooming.value) return
+      isZooming.value = false
+      window.removeEventListener('mousemove', handleZoomMove)
+      window.removeEventListener('mouseup', handleZoomEnd)
+      window.removeEventListener('touchmove', handleZoomMove)
+      window.removeEventListener('touchend', handleZoomEnd)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+
+
 
 
     onMounted(() => {
@@ -349,6 +406,7 @@ export default defineComponent({
       isWeekend,
       dayHoursList,
       calendarBodyHeight,
+      handleZoomStart,
     }
   },
 })
@@ -372,6 +430,16 @@ export default defineComponent({
   flex-shrink: 0;
   overflow-x: auto;
   flex: 1;
+  -webkit-mask-image: linear-gradient(to right,
+      transparent 0,
+      black 10px,
+      black calc(100% - 10px),
+      transparent 100%);
+  mask-image: linear-gradient(to right,
+      transparent 0,
+      black 10px,
+      black calc(100% - 10px),
+      transparent 100%);
   /* padding-left: var(--dc-day-container-width); */
 }
 
@@ -415,6 +483,7 @@ export default defineComponent({
   background-color: var(--dc-bg);
   display: flex;
   flex-direction: column;
+  user-select: none;
   align-items: center;
   justify-content: space-around;
   width: var(--dc-day-container-width);
@@ -513,5 +582,9 @@ export default defineComponent({
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
   /* Chrome, Safari and Opera */
+}
+
+.zoomable {
+  cursor: ns-resize;
 }
 </style>
