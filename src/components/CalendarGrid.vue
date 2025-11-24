@@ -53,7 +53,7 @@
   </div>
 </template>
 <script lang="ts">
-import { type PropType, ref, defineComponent, onMounted, nextTick ,computed } from 'vue'
+import { type PropType, ref, defineComponent, onMounted ,computed } from 'vue'
 import jalaali from 'jalaali-js'
 interface CalendarItem {
   start: Date
