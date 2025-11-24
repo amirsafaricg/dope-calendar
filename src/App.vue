@@ -9,11 +9,9 @@
     /> -->
     <CalendarGrid
       mode="month"
-      lang="en"
-      dir="ltr"
+      lang="fa"
+      dir="rtl"
       jalaali
-      :startHour="10"
-      :endHour="22"
     />
     <!-- <CalendarGrid mode="month" :start-date="new Date()" :jalaali="true" lang="fa" /> -->
   <!-- <CalendarGrid mode="week" jalaali :start-date="new Date()"  lang="fa" />  -->

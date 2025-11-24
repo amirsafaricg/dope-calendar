@@ -4,7 +4,7 @@
       <div class="header-padding"></div>
       <div ref="calendarHeader" @scroll="handleHeaderScroll" class="calendar-header hide-scrollbar">
         <div v-for="(day, index) in monthDays" :key="index" 
-          :class="{ 'weekend-day': isWeekend(day.weekDay) , 'day-cell' : true }">
+          :class="{ 'weekend-day': isWeekend(day.weekDay) , 'day-cell' : true }" :style="{width: `${100/ monthDays.length}%`}">
           <div class="day-number" :style="{
             color: isWeekend(day.weekDay)
               ? 'var(--dc-weekend-day-color)'
@@ -55,7 +55,12 @@
 <script lang="ts">
 import { type PropType, ref, defineComponent, onMounted, nextTick ,computed } from 'vue'
 import jalaali from 'jalaali-js'
-
+interface CalendarItem {
+  start: Date
+  end: Date
+  [key: string]: any
+}
+import { useDragToScroll } from '@/composables/useDragToScroll'
 export default defineComponent({
   name: 'CalendarGrid',
   props: {
@@ -74,10 +79,6 @@ export default defineComponent({
       type: Boolean,
       default: true,
     },
-    // minZoom: {
-    //   type: Number,
-    //   default: 1,
-    // },
     maxZoom: {
       type: Number,
       default: 5,
@@ -156,6 +157,11 @@ export default defineComponent({
     const calendarContent = ref<HTMLElement | null>(null)
     const calendarHeader = ref<HTMLElement | null>(null)
     const contentContainer = ref<HTMLElement | null>(null)
+
+    useDragToScroll(calendarHeader)
+    useDragToScroll(calendarContent)
+
+
 
     const handleContentScroll = () => {
       if (calendarHeader.value && calendarContent.value) {
@@ -518,6 +524,7 @@ const calendarBodyWidth = computed(() => {
   align-items: center;
   flex-shrink: 0;
   overflow-x: auto;
+  user-select:none;
   flex: 1;
   -webkit-mask-image: linear-gradient(to right,
       transparent 0,
@@ -538,7 +545,7 @@ const calendarBodyWidth = computed(() => {
   align-items: center;
   justify-content: center;
   padding: 0.5rem;
-  width: var(--dc-day-container-width);
+  min-width: var(--dc-day-container-width);
   flex-shrink: 0;
 }
 
@@ -605,13 +612,6 @@ const calendarBodyWidth = computed(() => {
   justify-content:center;
   font-weight: var(--dc-day-number-font-weight);
 }
-
-/* .grid-padding {
-  flex-shrink: 0;
-  height: 100%;
-  min-width: var(--dc-day-container-width);
-  width: var(--dc-day-container-width);
-} */
 
 .grid-content {
   flex: 1;
@@ -687,5 +687,13 @@ const calendarBodyWidth = computed(() => {
 
 .zoomable {
   cursor: ns-resize;
+}
+
+.cursor-grab {
+  cursor: grab;
+}
+
+.cursor-grabbing {
+  cursor: grabbing;
 }
 </style>
