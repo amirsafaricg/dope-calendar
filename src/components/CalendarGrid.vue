@@ -1,10 +1,11 @@
 <template>
-  <div :dir="direction" ref="calendar" class="calendar-wrapper  dope-calendar-grid">
+  <div :dir="dir" ref="calendar" class="calendar-wrapper  dope-calendar-grid">
     <div class="header-container">
       <div class="header-padding"></div>
-      <div ref="calendarHeader" class="calendar-header hide-scrollbar">
+      <div ref="calendarHeader" @scroll="handleHeaderScroll" class="calendar-header hide-scrollbar">
         <div v-for="(day, index) in monthDays" :key="index" class="day-cell" :style="{
-          width: 'var(--dc-day-container-width)',
+          minWidth: 'var(--dc-day-container-width)',
+          width:`${100/monthDays.length}%`,
         }">
           <div class="day-number" :style="{
             color: isWeekend(day.weekDay)
@@ -27,7 +28,7 @@
         </div>
       </div>
     </div>
-    <div class="content-container hide-scrollbar">
+    <div ref="contentContainer" class="content-container hide-scrollbar">
       <div :class="{ 'hours-column': true, 'zoomable': zoom }" :style="{ height: calendarBodyHeight }"
         @mousedown="handleZoomStart" @touchstart="handleZoomStart">
         <div v-for="(hour, index) in dayHoursList" :key="index" class="hour-label">
@@ -54,7 +55,7 @@
   </div>
 </template>
 <script lang="ts">
-import { type PropType, ref, defineComponent, onMounted, computed } from 'vue'
+import { type PropType, ref, defineComponent, onMounted, nextTick ,computed } from 'vue'
 import jalaali from 'jalaali-js'
 
 export default defineComponent({
@@ -62,16 +63,23 @@ export default defineComponent({
   props: {
     georgian: {
       type: Boolean,
-      default: true,
+      default: false,
+      validator: (value: boolean, props) => {
+        if (value === props.jalaali) {
+          console.error('Exactly one of "georgian" or "jalaali" props must be true.')
+          return false
+        }
+        return true
+      },
     },
     zoom: {
       type: Boolean,
       default: true,
     },
-    minZoom: {
-      type: Number,
-      default: 1,
-    },
+    // minZoom: {
+    //   type: Number,
+    //   default: 1,
+    // },
     maxZoom: {
       type: Number,
       default: 5,
@@ -80,22 +88,54 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
-    date: {
-      type: Date,
+    mode: {
+      type: String as PropType<'month' | 'week' | 'custom'>,
       required: true,
+      validator: (value: string) => {
+        return ['month', 'week', 'custom'].includes(value)
+      },
+    },
+     dir: {
+      default:'ltr',
+      type: String as PropType<'rtl' | 'ltr'>,
+      required: true,
+      validator: (value: string) => {
+        return ['rtl', 'ltr'].includes(value)
+      },
+    },
+    startDate: {
+      type: Date,
+      required: false,
       default: () => new Date(),
     },
-    days: {
-      type: [Number, String] as PropType<number | 'auto'>,
-      default: 'auto',
-      validator: (value: unknown) => {
-        if (typeof value === 'string') {
-          return value === 'auto'
+    endDate: {
+      type: Date,
+      required: false,
+      validator: (value: Date, props) => {
+        if (props.mode === 'custom' && !value) {
+          console.error('The `endDate` prop is required when `mode` is set to "custom".')
+          return false
         }
-        if (typeof value === 'number') {
-          return Number.isInteger(value)
+        if ((props.mode === 'month' || props.mode === 'week') && value) {
+          console.warn('`endDate` prop is ignored when `mode` is "month" or "week".')
         }
-        return false
+        return true
+      },
+    },
+    startHour: {
+      type: Number,
+      default: 0,
+      validator: (value: number) => value >= 0 && value <= 24,
+    },
+    endHour: {
+      type: Number,
+      default: 24,
+      validator: (value: number, props) => {
+        if (value < props.startHour) {
+          console.error('`endHour` cannot be smaller than `startHour`.')
+          return false
+        }
+        return value >= 0 && value <= 24
       },
     },
     lang: {
@@ -115,16 +155,19 @@ export default defineComponent({
   },
   setup(props) {
     const calendar = ref<HTMLElement | null>(null)
-    if (props.georgian === props.jalaali) {
-      throw new Error('Exactly one of "georgian" or "jalaali" props must be true.')
-    }
-
     const calendarContent = ref<HTMLElement | null>(null)
     const calendarHeader = ref<HTMLElement | null>(null)
+    const contentContainer = ref<HTMLElement | null>(null)
 
     const handleContentScroll = () => {
       if (calendarHeader.value && calendarContent.value) {
         calendarHeader.value.scrollLeft = calendarContent.value.scrollLeft
+      }
+    }
+
+    const handleHeaderScroll = () => {
+      if (calendarHeader.value && calendarContent.value) {
+        calendarContent.value.scrollLeft = calendarHeader.value.scrollLeft
       }
     }
 
@@ -142,51 +185,78 @@ export default defineComponent({
     const toPersianNum = (n: number | string) =>
       String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[parseInt(d)]!)
 
+      // props.lang
     const monthDays = computed(() => {
       type DayObject = {
         day: number | string
         weekDay: string
       }
       const days: DayObject[] = []
-      if (props.georgian) {
-        const year = props.date.getFullYear()
-        const month = props.date.getMonth() // 0-indexed
-        const daysInMonth = new Date(year, month + 1, 0).getDate()
-
-        for (let day = 1; day <= daysInMonth; day++) {
-          const date = new Date(year, month, day)
+      const addDay = (date: Date) => {
+        if (props.georgian) {
           days.push({
-            day: props.lang === 'fa' ? toPersianNum(day) : day,
+            day: props.lang==='fa' ? toPersianNum(date.getDate()) : date.getDate(),
             weekDay: weekdays[date.getDay()]!,
           })
-        }
-      } else {
-        // --- Jalaali Logic ---
-        const { jy: year, jm: month } = jalaali.toJalaali(props.date)
-        const daysInMonth = jalaali.jalaaliMonthLength(year, month)
-
-        for (let day = 1; day <= daysInMonth; day++) {
-          const gregorianDate = jalaali.toGregorian(year, month, day)
-          const date = new Date(gregorianDate.gy, gregorianDate.gm - 1, gregorianDate.gd)
+        } else {
+          const jalaaliDate = jalaali.toJalaali(date)
           days.push({
-            day: props.lang === 'fa' ? toPersianNum(day) : day,
+            day: props.lang==='fa'  ? toPersianNum(jalaaliDate.jd) : jalaaliDate.jd,
             weekDay: weekdays[date.getDay()]!,
           })
         }
       }
+
+      if (props.mode === 'month') {
+        if (props.jalaali) {
+          const jalaaliDate = jalaali.toJalaali(props.startDate)
+          const jy = jalaaliDate.jy
+          const jm = jalaaliDate.jm
+          const daysInMonth = jalaali.jalaaliMonthLength(jy, jm)
+          for (let i = 1; i <= daysInMonth; i++) {
+            const gregorianDate = jalaali.toGregorian(jy, jm, i)
+            addDay(new Date(gregorianDate.gy, gregorianDate.gm - 1, gregorianDate.gd))
+          }
+        } else {
+          const year = props.startDate.getFullYear()
+          const month = props.startDate.getMonth()
+          const daysInMonth = new Date(year, month + 1, 0).getDate()
+          for (let i = 1; i <= daysInMonth; i++) {
+            addDay(new Date(year, month, i))
+          }
+        }
+      } else if (props.mode === 'week') {
+        const startOfWeek = new Date(props.startDate)
+        const dayOfWeek = startOfWeek.getDay() // Sunday is 0, Saturday is 6
+
+        if (props.jalaali) {
+          // Week starts on Saturday for 'fa'
+          const offset = (dayOfWeek + 1) % 7
+          startOfWeek.setDate(startOfWeek.getDate() - offset)
+        } else {
+          // Week starts on Sunday for 'en'
+          startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek)
+        }
+
+        for (let i = 0; i < 7; i++) {
+          const day = new Date(startOfWeek)
+          day.setDate(startOfWeek.getDate() + i)
+          addDay(day)
+        }
+      } else if (props.mode === 'custom' && props.endDate) {
+        let currentDate = new Date(props.startDate)
+        const lastDate = new Date(props.endDate)
+        while (currentDate <= lastDate) {
+          addDay(new Date(currentDate))
+          currentDate.setDate(currentDate.getDate() + 1)
+        }
+      }
+
       return days
     })
 
-    onMounted(() => {
-      console.log(monthDays.value)
-    })
-
-    const direction = computed(() => {
-      return props.lang === 'en' ? 'ltr' : 'rtl'
-    })
-
     const weekendDay = computed(() => {
-      return props.lang === 'en' ? 'sunday' : 'friday'
+      return props.georgian ? 'sunday' : 'friday'
     })
 
     const isWeekend = (day: string) => {
@@ -262,17 +332,13 @@ export default defineComponent({
       )
     }
 
-    const dayHoursList = computed(() => {
-      if (props.format === '24h') {
-        return Array.from({ length: 24 }, (_, i) => {
+       const dayHoursList = computed(() => {
+      const hours = []
+      for (let i = props.startHour; i <= props.endHour; i++) {
+        if (props.format === '24h') {
           const time = `${i}:00`
-          return props.lang === 'fa' ? toPersianNum(time) : time
-        })
-      }
-
-      if (props.format === 'ampm') {
-        const hours = []
-        for (let i = 0; i < 24; i++) {
+          hours.push(props.lang === 'fa' ? toPersianNum(time) : time)
+        } else if (props.format === 'ampm') {
           const hour = i % 12 === 0 ? 12 : i % 12
           if (props.lang === 'fa') {
             const period = i < 12 ? 'ق.ظ' : 'ب.ظ'
@@ -281,43 +347,26 @@ export default defineComponent({
             const period = i < 12 ? 'am' : 'pm'
             hours.push(`${hour} ${period}`)
           }
-        }
-        return hours
-      }
-
-      if (props.format === 'keys') {
-        if (props.lang === 'fa') {
-          const faHours = []
-          for (let i = 0; i < 24; i++) {
+        } else if (props.format === 'keys') {
+          if (props.lang === 'fa') {
             let period = ''
-            if (i >= 0 && i < 6)
-              period = 'شب' // Night
-            else if (i >= 6 && i < 12)
-              period = 'صبح' // Morning
-            else if (i >= 12 && i < 18)
-              period = 'ظهر' // Afternoon
+            if (i >= 0 && i < 6) period = 'شب' // Night
+            else if (i >= 6 && i < 12) period = 'صبح' // Morning
+            else if (i >= 12 && i < 18) period = 'ظهر' // Afternoon
             else period = 'عصر' // Evening
-
-            faHours.push(`${toPersianNum(i)} ${period}`)
-          }
-          return faHours
-        } else {
-          // English ('en')
-          const enHours = []
-          for (let i = 0; i < 24; i++) {
+            hours.push(`${toPersianNum(i)} ${period}`)
+          } else {
+            // English ('en')
             let period = ''
             if (i >= 0 && i < 6) period = 'Night'
             else if (i >= 6 && i < 12) period = 'Morning'
             else if (i >= 12 && i < 18) period = 'Afternoon'
             else period = 'Evening'
-
-            enHours.push(`${i}:00 ${period}`)
+            hours.push(`${i}:00 ${period}`)
           }
-          return enHours
         }
       }
-
-      return [] // Default empty array
+      return hours
     })
 
     const dayCellWidth = ref(0)
@@ -325,21 +374,31 @@ export default defineComponent({
     const zoomAmount = ref(1)
     const isZooming = ref(false)
     const startY = ref(0)
-    const initialZoom = ref(1)
+    const initialZoomOnDrag = ref(1)
+    const minZoomAmount = ref(1)
+    const maxZoomAmount = ref(props.maxZoom)
 
-    const calendarBodyWidth = computed(() => {
-      return `${monthDays.value.length * dayCellWidth.value}px`
+const calendarBodyWidth = computed(() => {
+      if (calendar.value) {
+        const style = getComputedStyle(calendar.value)
+        const dayContainerWidth = parseInt(
+          style.getPropertyValue('--dc-day-container-width').trim(),
+          10
+        )
+        return `${monthDays.value.length * dayContainerWidth}px`
+      }
+      return '0px'
     })
 
     const calendarBodyHeight = computed(() => {
       return `${dayHoursList.value.length * zoomAmount.value * dayCellHeight.value}px`
     })
 
-    const handleZoomStart = (event: MouseEvent | TouchEvent) => {
+  const handleZoomStart = (event: MouseEvent | TouchEvent) => {
       if (!props.zoom) return
       isZooming.value = true
       startY.value = 'touches' in event ? event.touches[0]!.clientY : event.clientY
-      initialZoom.value = zoomAmount.value
+      initialZoomOnDrag.value = zoomAmount.value
       window.addEventListener('mousemove', handleZoomMove)
       window.addEventListener('mouseup', handleZoomEnd)
       window.addEventListener('touchmove', handleZoomMove)
@@ -355,10 +414,10 @@ export default defineComponent({
         const currentY = 'touches' in event ? event.touches[0]!.clientY : event.clientY
         const deltaY = startY.value - currentY // Inverted for natural feel (drag up = zoom in)
         const zoomSensitivity = 200 // Adjust this value to control zoom speed
-        const newZoom = initialZoom.value + deltaY / zoomSensitivity
+        const newZoom = initialZoomOnDrag.value + deltaY / zoomSensitivity
 
         // Clamp the zoom level between min and max
-        zoomAmount.value = Math.max(props.minZoom, Math.min(props.maxZoom, newZoom))
+        zoomAmount.value = Math.max(minZoomAmount.value, Math.min(maxZoomAmount.value, newZoom))
       })
     }
 
@@ -376,30 +435,55 @@ export default defineComponent({
 
 
 
-    onMounted(() => {
-      console.log(monthDays.value)
-      if (calendar.value) {
+  onMounted(() => {
+      if (calendar.value && contentContainer.value) {
         const style = getComputedStyle(calendar.value)
-        const widthStr = style.getPropertyValue('--dc-day-container-width').trim()
+        const widthStr = style.getPropertyValue('--dc-day-cell-width').trim()
         const heightStr = style.getPropertyValue('--dc-day-cell-height').trim()
-        console.log(widthStr)
+
         if (widthStr) {
           dayCellWidth.value = parseInt(widthStr, 10)
         }
         if (heightStr) {
           dayCellHeight.value = parseInt(heightStr, 10)
         }
-        console.log(calendarBodyWidth.value)
+
+        // Calculate initial zoom to fit content width
+        const containerWidth = contentContainer.value.clientWidth
+        const naturalGridWidth = monthDays.value.length * dayCellWidth.value
+        let requiredZoomX = 1
+        if (naturalGridWidth > 0 && containerWidth > naturalGridWidth) {
+          requiredZoomX = containerWidth / naturalGridWidth
+        }
+
+        // Calculate initial zoom to fit content height
+        const containerHeight = contentContainer.value.clientHeight
+        const naturalGridHeight = dayHoursList.value.length * dayCellHeight.value
+        let requiredZoomY = 1
+        if (naturalGridHeight > 0 && containerHeight > naturalGridHeight) {
+          requiredZoomY = containerHeight / naturalGridHeight
+        }
+
+        // Use the larger of the two to fill the space
+        const initialZoom = Math.max(requiredZoomX, requiredZoomY)
+
+        if (initialZoom > 1) {
+          zoomAmount.value = initialZoom
+          minZoomAmount.value = initialZoom
+          maxZoomAmount.value = initialZoom * props.maxZoom
+        } else {
+          minZoomAmount.value = 1
+          maxZoomAmount.value = props.maxZoom
+        }
       }
     })
-
 
     return {
       calendarBodyWidth,
       weekendDay,
-      direction,
       calendarContent,
       calendarHeader,
+      contentContainer,
       monthDays,
       getDayTitle,
       handleContentScroll,
@@ -408,6 +492,7 @@ export default defineComponent({
       dayHoursList,
       calendarBodyHeight,
       handleZoomStart,
+      handleHeaderScroll,
     }
   },
 })
@@ -493,11 +578,16 @@ export default defineComponent({
   align-items: center;
   justify-content: space-around;
   width: var(--dc-day-container-width);
-  border-left: var(--dc-border-width) solid var(--dc-border-color);
+}
+
+[dir='ltr'] .hours-column {
+  border-right: var(--dc-border-width) solid var(--dc-border-color);
+  border-left: none;
 }
 
 [dir='rtl'] .hours-column {
-  border-right: var(--dc-border-width) solid var(--dc-border-color);
+  border-left: var(--dc-border-width) solid var(--dc-border-color);
+  border-right: none;
 }
 
 .hour-label {
@@ -519,7 +609,6 @@ export default defineComponent({
   height: 100%;
   background-color: var(--dc-bg);
   position: relative;
-  /* bg-red-400 */
 }
 
 .horizontal-grid {
@@ -580,14 +669,11 @@ export default defineComponent({
 
 .hide-scrollbar {
   -ms-overflow-style: none;
-  /* IE and Edge */
   scrollbar-width: none;
-  /* Firefox */
 }
 
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
-  /* Chrome, Safari and Opera */
 }
 
 .zoomable {
