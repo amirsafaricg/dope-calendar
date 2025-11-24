@@ -3,10 +3,8 @@
     <div class="header-container">
       <div class="header-padding"></div>
       <div ref="calendarHeader" @scroll="handleHeaderScroll" class="calendar-header hide-scrollbar">
-        <div v-for="(day, index) in monthDays" :key="index" class="day-cell" :style="{
-          minWidth: 'var(--dc-day-container-width)',
-          width:`${100/monthDays.length}%`,
-        }">
+        <div v-for="(day, index) in monthDays" :key="index" 
+          :class="{ 'weekend-day': isWeekend(day.weekDay) , 'day-cell' : true }">
           <div class="day-number" :style="{
             color: isWeekend(day.weekDay)
               ? 'var(--dc-weekend-day-color)'
@@ -531,12 +529,8 @@ const calendarBodyWidth = computed(() => {
       black 10px,
       black calc(100% - 10px),
       transparent 100%);
-  /* padding-left: var(--dc-day-container-width); */
 }
 
-/* [dir='rtl']{
-  padding-right: var(--dc-day-container-width);
-} */
 
 .day-cell {
   display: flex;
@@ -544,17 +538,27 @@ const calendarBodyWidth = computed(() => {
   align-items: center;
   justify-content: center;
   padding: 0.5rem;
-  width: var(--dc-day-cell-width);
+  width: var(--dc-day-container-width);
   flex-shrink: 0;
 }
 
 .day-number {
-  /* Styles are applied via inline :style */
+  color: var(--dc-day-number-color);
+  font-size: var(--dc-day-number-font-size);
+  font-weight: var(--dc-day-number-font-weight);
 }
 
 .day-name {
-  /* Styles are applied via inline :style */
+  color: var(--dc-day-name-color);
+  font-size: var(--dc-day-name-font-size);
+  font-weight: var(--dc-day-name-font-weight);
 }
+
+.weekend-day .day-number,
+.weekend-day .day-name {
+  color: var(--dc-weekend-day-color);
+}
+
 
 .calendar-body {
   flex: 1;
@@ -594,6 +598,11 @@ const calendarBodyWidth = computed(() => {
   color: var(--dc-day-number-color);
   font-size: var(--dc-day-number-font-size);
   min-height: var(--dc-day-cell-height);
+  height:0px;
+  overflow: visible;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   font-weight: var(--dc-day-number-font-weight);
 }
 
