@@ -1,18 +1,19 @@
 <template>
   <div class="h-dvh w-dvw">
-    <!-- <CalendarGrid
+    <CalendarGrid
       mode="custom"
       :start-date="new Date()"
-      :end-date="new Date(new Date().setDate(new Date().getDate() + 9))"
-      :georgian="true"
+      :end-date="new Date(new Date().setDate(new Date().getDate() + 35))"
+      jalaali
       lang="fa"
-    /> -->
-    <CalendarGrid
+      dir="rtl"
+    />
+   <!-- <CalendarGrid
       mode="month"
       lang="fa"
       dir="rtl"
       jalaali
-    />
+    />-->
     <!-- <CalendarGrid mode="month" :start-date="new Date()" :jalaali="true" lang="fa" /> -->
   <!-- <CalendarGrid mode="week" jalaali :start-date="new Date()"  lang="fa" />  -->
   </div>
