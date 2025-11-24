@@ -1,13 +1,13 @@
 <template>
   <div class="h-dvh w-dvw">
-    <CalendarGrid
+    <!-- <CalendarGrid
       mode="custom"
       :start-date="new Date()"
       :end-date="new Date(new Date().setDate(new Date().getDate() + 35))"
       jalaali
       lang="fa"
       dir="rtl"
-    />
+    /> -->
    <!-- <CalendarGrid
       mode="month"
       lang="fa"
@@ -15,7 +15,7 @@
       jalaali
     />-->
     <!-- <CalendarGrid mode="month" :start-date="new Date()" :jalaali="true" lang="fa" /> -->
-  <!-- <CalendarGrid mode="week" jalaali :start-date="new Date()"  lang="fa" />  -->
+  <CalendarGrid mode="week" georgian :start-date="new Date()"  lang="en" /> 
   </div>
 </template>
 <script lang="ts">

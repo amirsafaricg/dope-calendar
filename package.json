@@ -21,6 +21,7 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.1.17",
     "jalaali-js": "^1.2.8",
+    "luxon": "^3.7.2",
     "tailwindcss": "^4.1.17",
     "vue": "^3.5.22"
   },
@@ -28,6 +29,7 @@
     "@prettier/plugin-oxc": "^0.0.4",
     "@tsconfig/node22": "^22.0.2",
     "@types/jalaali-js": "^1.2.0",
+    "@types/luxon": "^3.7.1",
     "@types/node": "^22.18.11",
     "@vitejs/plugin-vue": "^6.0.1",
     "@vue/eslint-config-prettier": "^10.2.0",

@@ -60,6 +60,9 @@ interface CalendarItem {
   end: Date
   [key: string]: any
 }
+
+import { DateTime } from 'luxon'
+
 import { useDragToScroll } from '@/composables/useDragToScroll'
 export default defineComponent({
   name: 'CalendarGrid',
@@ -189,76 +192,73 @@ export default defineComponent({
     const toPersianNum = (n: number | string) =>
       String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[parseInt(d)]!)
 
-      // props.lang
     const monthDays = computed(() => {
       type DayObject = {
         day: number | string
         weekDay: string
       }
       const days: DayObject[] = []
-      const addDay = (date: Date) => {
-        if (props.georgian) {
+
+      // Luxon's weekday: 1=Mon, 7=Sun. We need to map it to our weekdays array index.
+      // For 'en' (Sun=0): Sunday is 7 -> 7 % 7 = 0. Monday is 1 -> 1 % 7 = 1.
+      // For 'fa' (Sat=0): Saturday is 6 -> (6 + 1) % 7 = 0. Sunday is 7 -> (7 + 1) % 7 = 1.
+      const getWeekdayIndex = (dt: DateTime) => {
+        if (props.lang === 'fa') {
+          return (dt.weekday + 1) % 7
+        }
+        return dt.weekday % 7
+      }
+
+      const addDay = (dt: DateTime) => {
+        if (props.jalaali) {
+          const dtJalali = dt.reconfigure({ outputCalendar: 'persian' })
           days.push({
-            day: props.lang==='fa' ? toPersianNum(date.getDate()) : date.getDate(),
-            weekDay: weekdays[date.getDay()]!,
+            day: props.lang === 'fa' ? toPersianNum(dtJalali.day) : dtJalali.day,
+            weekDay: weekdays[getWeekdayIndex(dt)]!
           })
         } else {
-          const jalaaliDate = jalaali.toJalaali(date)
           days.push({
-            day: props.lang==='fa'  ? toPersianNum(jalaaliDate.jd) : jalaaliDate.jd,
-            weekDay: weekdays[date.getDay()]!,
+            day: props.lang === 'fa' ? toPersianNum(dt.day) : dt.day,
+            weekDay: weekdays[getWeekdayIndex(dt)]!
           })
         }
       }
 
+      const startDt = DateTime.fromJSDate(props.startDate)
+
       if (props.mode === 'month') {
-        if (props.jalaali) {
-          const jalaaliDate = jalaali.toJalaali(props.startDate)
-          const jy = jalaaliDate.jy
-          const jm = jalaaliDate.jm
-          const daysInMonth = jalaali.jalaaliMonthLength(jy, jm)
-          for (let i = 1; i <= daysInMonth; i++) {
-            const gregorianDate = jalaali.toGregorian(jy, jm, i)
-            addDay(new Date(gregorianDate.gy, gregorianDate.gm - 1, gregorianDate.gd))
-          }
-        } else {
-          const year = props.startDate.getFullYear()
-          const month = props.startDate.getMonth()
-          const daysInMonth = new Date(year, month + 1, 0).getDate()
-          for (let i = 1; i <= daysInMonth; i++) {
-            addDay(new Date(year, month, i))
-          }
+        // Determine the start of the month in the correct calendar system
+        const monthStart = props.jalaali
+          ? startDt.reconfigure({ outputCalendar: 'persian' }).startOf('month')
+          : startDt.startOf('month')
+
+        const daysInMonth = monthStart.daysInMonth!
+        for (let i = 0; i < daysInMonth; i++) {
+          // Add days sequentially from the start of the month
+          addDay(monthStart.plus({ days: i }))
         }
       } else if (props.mode === 'week') {
-        const startOfWeek = new Date(props.startDate)
-        const dayOfWeek = startOfWeek.getDay() // Sunday is 0, Saturday is 6
-
-        if (props.jalaali) {
-          // Week starts on Saturday for 'fa'
-          const offset = (dayOfWeek + 1) % 7
-          startOfWeek.setDate(startOfWeek.getDate() - offset)
-        } else {
-          // Week starts on Sunday for 'en'
-          startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek)
-        }
+        // Determine the start of the week based on locale
+        // For 'fa', week starts on Saturday. For 'en', it starts on Sunday.
+        const weekStart = props.jalaali
+          ? startDt.startOf('week', { useLocale: 'fa-IR' })
+          : startDt.startOf('week', { useLocale: 'en-US' })
 
         for (let i = 0; i < 7; i++) {
-          const day = new Date(startOfWeek)
-          day.setDate(startOfWeek.getDate() + i)
-          addDay(day)
+          addDay(weekStart.plus({ days: i }))
         }
       } else if (props.mode === 'custom' && props.endDate) {
-        let currentDate = new Date(props.startDate)
-        const lastDate = new Date(props.endDate)
-        while (currentDate <= lastDate) {
-          addDay(new Date(currentDate))
-          currentDate.setDate(currentDate.getDate() + 1)
+        let currentDt = startDt.startOf('day')
+        const endDt = DateTime.fromJSDate(props.endDate).endOf('day')
+
+        while (currentDt <= endDt) {
+          addDay(currentDt)
+          currentDt = currentDt.plus({ days: 1 })
         }
       }
 
       return days
     })
-
     const weekendDay = computed(() => {
       return props.georgian ? 'sunday' : 'friday'
     })
@@ -448,7 +448,7 @@ const calendarBodyWidth = computed(() => {
         if (widthStr) {
           dayCellWidth.value = parseInt(widthStr, 10)
         }
-        if (heightStr) {
+        if (heightStr) { 
           dayCellHeight.value = parseInt(heightStr, 10)
         }
 
