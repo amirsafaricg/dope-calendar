@@ -6,7 +6,7 @@
     "Vahid V. <vhid.vz@gmail.com>"
   ],
   "type": "module",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "scripts": {
     "dev": "vite",
     "build": "run-p type-check \"build-only {@}\" --",
