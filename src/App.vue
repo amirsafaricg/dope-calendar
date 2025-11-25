@@ -12,8 +12,8 @@
         <div class="custom-calendar-item cursor-pointer" :style="{ backgroundColor: item.color }">
           <div class="item-title">{{ item.title }}</div>
           <div class="item-time">
-            <!-- {{ item.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }} -
-            {{ item.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }} -->
+             {{ item.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }} -
+            {{ item.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
           </div>
         </div>
       </template>

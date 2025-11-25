@@ -35,7 +35,7 @@
       </div>
       <div class="calendar-body hide-scrollbar" @scroll="handleContentScroll" ref="calendarContent"
         :style="{ height: calendarBodyHeight }">
-        <div class="grid-content" :style="{ minWidth: calendarBodyWidth }">
+        <div class="grid-content" :style="{ minWidth: calendarBodyWidth, maxWidth: calendarBodyWidth}">
           <div class="horizontal-grid">
             <div v-for="(hour, index) in dayHoursList" :key="index">
               <div class="grid-line-h"></div>
@@ -421,6 +421,8 @@ const calendarBodyWidth = computed(() => {
     let startY = 0
     const dragFromUpperHalf = ref(true)
 
+    let animationFrameId: number | null = null
+
     const handleZoomStart = (event: MouseEvent | TouchEvent) => {
       if (!props.zoom) return
       isZooming.value = true
@@ -443,18 +445,34 @@ const calendarBodyWidth = computed(() => {
     const handleZoomMove = (event: MouseEvent | TouchEvent) => {
       if (!isZooming.value) return
       event.preventDefault()
-      const currentY = 'touches' in event ? event.touches[0].clientY : event.clientY
-      const deltaY = currentY - startY
 
-      let zoomDirection = dragFromUpperHalf.value ? -1 : 1
-      const newzoomAmount = zoomAmount.value + (deltaY * zoomDirection) / 50 // Adjust sensitivity
-      zoomAmount.value = Math.max(minZoomAmount.value, Math.min(newzoomAmount, maxZoomAmount.value)) // Clamp zoom level
-      startY = currentY
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId)
+      }
+
+      animationFrameId = requestAnimationFrame(() => {
+        const currentY = 'touches' in event ? event.touches[0].clientY : event.clientY
+        const deltaY = currentY - startY
+
+        const zoomDirection = dragFromUpperHalf.value ? -1 : 1
+        const newZoomAmount = zoomAmount.value + (deltaY * zoomDirection) / 50 // Adjust sensitivity
+        zoomAmount.value = Math.max(
+          minZoomAmount.value,
+          Math.min(newZoomAmount, maxZoomAmount.value)
+        ) // Clamp zoom level
+        startY = currentY
+      })
     }
 
     const handleZoomEnd = () => {
       if (!isZooming.value) return
       isZooming.value = false
+
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId)
+        animationFrameId = null
+      }
+
       document.removeEventListener('mousemove', handleZoomMove)
       document.removeEventListener('touchmove', handleZoomMove)
       document.removeEventListener('mouseup', handleZoomEnd)
@@ -711,6 +729,7 @@ const calendarBodyWidth = computed(() => {
   flex: 1;
   height: 100%;
   background-color: var(--dc-bg);
+  overflow: hidden;
   position: relative;
 }
 
