@@ -46,7 +46,17 @@
               <div :class="{ 'grid-line-v': day !== 1 }"></div>
             </div>
           </div>
-          <div class="content"></div>
+          <div class="content">
+            <div v-for="item in processedItems" :key="item.id" :style="item.style">
+              <slot name="item" :item="item">
+                <!-- Default item appearance -->
+                <div class="default-item">
+                  <strong>{{ item.title }}</strong>
+                  <p>{{ item.start.toLocaleTimeString() }} - {{ item.end.toLocaleTimeString() }}</p>
+                </div>
+              </slot>
+            </div>
+          </div>        
         </div>
       </div>
     </div>
@@ -110,6 +120,10 @@ export default defineComponent({
       required: false,
       default: () => new Date(),
     },
+    items: {
+      type: Array as PropType<{ start: Date; end: Date; [key: string]: any }[]>,
+      default: () => [],
+    },
     endDate: {
       type: Date,
       required: false,
@@ -160,9 +174,12 @@ export default defineComponent({
     const calendarContent = ref<HTMLElement | null>(null)
     const calendarHeader = ref<HTMLElement | null>(null)
     const contentContainer = ref<HTMLElement | null>(null)
+    const isZooming = ref(false)
+
+
 
     useDragToScroll(calendarHeader)
-    useDragToScroll(calendarContent)
+    useDragToScroll(calendarContent, isZooming.value)
 
 
 
@@ -376,8 +393,6 @@ export default defineComponent({
     const dayCellWidth = ref(0)
     const dayCellHeight = ref(0)
     const zoomAmount = ref(1)
-    const isZooming = ref(false)
-    const startY = ref(0)
     const initialZoomOnDrag = ref(1)
     const minZoomAmount = ref(1)
     const maxZoomAmount = ref(props.maxZoom)
@@ -398,43 +413,56 @@ const calendarBodyWidth = computed(() => {
       return `${dayHoursList.value.length * zoomAmount.value * dayCellHeight.value}px`
     })
 
-  const handleZoomStart = (event: MouseEvent | TouchEvent) => {
+    const topPadding = computed(()=>{
+      return zoomAmount.value * dayCellHeight.value /2
+    })
+
+    // const zoomAmount = ref(1) // 1 = 100% zoom
+    let startY = 0
+    const dragFromUpperHalf = ref(true)
+
+    const handleZoomStart = (event: MouseEvent | TouchEvent) => {
       if (!props.zoom) return
       isZooming.value = true
-      startY.value = 'touches' in event ? event.touches[0]!.clientY : event.clientY
-      initialZoomOnDrag.value = zoomAmount.value
-      window.addEventListener('mousemove', handleZoomMove)
-      window.addEventListener('mouseup', handleZoomEnd)
-      window.addEventListener('touchmove', handleZoomMove)
-      window.addEventListener('touchend', handleZoomEnd)
-      document.body.style.cursor = 'ns-resize'
-      document.body.style.userSelect = 'none'
+      startY = 'touches' in event ? event.touches[0].clientY : event.clientY
+
+      const targetElement = event.currentTarget as HTMLElement
+      const rect = targetElement.getBoundingClientRect()
+      const clickY = 'touches' in event ? event.touches[0].clientY : event.clientY
+      const middleY = rect.top + rect.height / 2
+      dragFromUpperHalf.value = clickY < middleY
+
+      document.addEventListener('mousemove', handleZoomMove)
+      document.addEventListener('touchmove', handleZoomMove)
+      document.addEventListener('mouseup', handleZoomEnd)
+      document.addEventListener('touchend', handleZoomEnd)
+      document.addEventListener('mouseleave', handleZoomEnd)
+      document.addEventListener('touchcancel', handleZoomEnd)
     }
 
     const handleZoomMove = (event: MouseEvent | TouchEvent) => {
       if (!isZooming.value) return
+      event.preventDefault()
+      const currentY = 'touches' in event ? event.touches[0].clientY : event.clientY
+      const deltaY = currentY - startY
 
-      requestAnimationFrame(() => {
-        const currentY = 'touches' in event ? event.touches[0]!.clientY : event.clientY
-        const deltaY = startY.value - currentY // Inverted for natural feel (drag up = zoom in)
-        const zoomSensitivity = 200 // Adjust this value to control zoom speed
-        const newZoom = initialZoomOnDrag.value + deltaY / zoomSensitivity
-
-        // Clamp the zoom level between min and max
-        zoomAmount.value = Math.max(minZoomAmount.value, Math.min(maxZoomAmount.value, newZoom))
-      })
+      let zoomDirection = dragFromUpperHalf.value ? -1 : 1
+      const newzoomAmount = zoomAmount.value + (deltaY * zoomDirection) / 50 // Adjust sensitivity
+      zoomAmount.value = Math.max(minZoomAmount.value, Math.min(newzoomAmount, maxZoomAmount.value)) // Clamp zoom level
+      startY = currentY
     }
 
     const handleZoomEnd = () => {
       if (!isZooming.value) return
       isZooming.value = false
-      window.removeEventListener('mousemove', handleZoomMove)
-      window.removeEventListener('mouseup', handleZoomEnd)
-      window.removeEventListener('touchmove', handleZoomMove)
-      window.removeEventListener('touchend', handleZoomEnd)
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
+      document.removeEventListener('mousemove', handleZoomMove)
+      document.removeEventListener('touchmove', handleZoomMove)
+      document.removeEventListener('mouseup', handleZoomEnd)
+      document.removeEventListener('touchend', handleZoomEnd)
+      document.removeEventListener('mouseleave', handleZoomEnd)
+      document.removeEventListener('touchcancel', handleZoomEnd)
     }
+
 
 
 
@@ -482,6 +510,62 @@ const calendarBodyWidth = computed(() => {
       }
     })
 
+  const processedItems = computed(() => {
+      const dayWidth = 100 / monthDays.value.length
+      const totalHours = props.endHour - props.startHour
+
+      // The total height of the scrollable content area for items.
+      const contentHeight =
+        dayHoursList.value.length * zoomAmount.value * dayCellHeight.value - 2 * topPadding.value
+
+      return props.items
+        .map((item, index) => {
+          const startDt = DateTime.fromJSDate(item.start)
+          const endDt = DateTime.fromJSDate(item.end)
+
+          const dayIndex = monthDays.value.findIndex((day) => {
+            const dayDt = props.jalaali
+              ? DateTime.fromObject(
+                  { day: day.day as number, month: startDt.month, year: startDt.year },
+                  { zone: 'local', numberingSystem: 'latn', outputCalendar: 'persian' }
+                )
+              : DateTime.fromObject({
+                  day: day.day as number,
+                  month: startDt.month,
+                  year: startDt.year
+                })
+
+            return dayDt.hasSame(startDt, 'day')
+          })
+
+          if (dayIndex === -1) {
+            return null // Item is not in the visible range
+          }
+
+          const startOfDay = startDt.startOf('day').plus({ hours: props.startHour })
+          const itemStartOffset = startDt.diff(startOfDay, 'minutes').minutes
+          const itemDuration = endDt.diff(startDt, 'minutes').minutes
+
+          const topOffset = (itemStartOffset / (totalHours * 60)) * contentHeight
+          const height = (itemDuration / (totalHours * 60)) * contentHeight
+          const left = dayIndex * dayWidth
+          const width = dayWidth
+
+          return {
+            ...item,
+            id: `item-${index}`,
+            style: {
+              top: `calc(${topPadding.value}px + ${topOffset}px)`,
+              left: `${left}%`,
+              height: `${height}px`,
+              width: `${width}%`,
+              position: 'absolute'
+            }
+          }
+        })
+        .filter((item) => item !== null)
+    })
+
     return {
       calendarBodyWidth,
       weekendDay,
@@ -497,17 +581,27 @@ const calendarBodyWidth = computed(() => {
       calendarBodyHeight,
       handleZoomStart,
       handleHeaderScroll,
+      processedItems,
     }
   },
 })
 </script>
 <style scoped>
 @import '@/assets/css/calendar.css';
-.content{
+.content {
+  position: relative;
   width: 100%;
   height: 100%;
-  position: absolute;
-  z-index: 10;
+}
+
+.default-item {
+  background-color: rgba(66, 133, 244, 0.8);
+  color: white;
+  padding: 4px;
+  border-radius: 4px;
+  height: 100%;
+  overflow: hidden;
+  font-size: 12px;
 }
 .calendar-wrapper {
   width: 100%;
