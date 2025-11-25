@@ -6,7 +6,7 @@
       mode="month"
       dir="ltr"
       lang="en"
-      :items="calendarItems"
+      v-model="calendarItems"
     >
       <template #item="{ item }">
         <div class="custom-calendar-item cursor-pointer" :style="{ backgroundColor: item.color }">

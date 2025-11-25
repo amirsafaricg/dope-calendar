@@ -120,7 +120,7 @@ export default defineComponent({
       required: false,
       default: () => new Date(),
     },
-    items: {
+    modelValue: {
       type: Array as PropType<{ start: Date; end: Date; [key: string]: any }[]>,
       default: () => [],
     },
@@ -397,7 +397,7 @@ export default defineComponent({
     const minZoomAmount = ref(1)
     const maxZoomAmount = ref(props.maxZoom)
 
-const calendarBodyWidth = computed(() => {
+    const calendarBodyWidth = computed(() => {
       if (calendar.value) {
         const style = getComputedStyle(calendar.value)
         const dayContainerWidth = parseInt(
@@ -435,7 +435,7 @@ const calendarBodyWidth = computed(() => {
       dragFromUpperHalf.value = clickY < middleY
 
       document.addEventListener('mousemove', handleZoomMove)
-      document.addEventListener('touchmove', handleZoomMove)
+      document.addEventListener('touchmove', handleZoomMove, { passive: false })
       document.addEventListener('mouseup', handleZoomEnd)
       document.addEventListener('touchend', handleZoomEnd)
       document.addEventListener('mouseleave', handleZoomEnd)
@@ -446,11 +446,12 @@ const calendarBodyWidth = computed(() => {
       if (!isZooming.value) return
       event.preventDefault()
 
+
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId)
       }
 
-      animationFrameId = requestAnimationFrame(() => {
+      animationFrameId = requestAnimationFrame(() => {    
         const currentY = 'touches' in event ? event.touches[0].clientY : event.clientY
         const deltaY = currentY - startY
 
@@ -536,7 +537,7 @@ const calendarBodyWidth = computed(() => {
       const contentHeight =
         dayHoursList.value.length * zoomAmount.value * dayCellHeight.value - 2 * topPadding.value
 
-      return props.items
+      return props.modelValue
         .map((item, index) => {
           const startDt = DateTime.fromJSDate(item.start)
           const endDt = DateTime.fromJSDate(item.end)
